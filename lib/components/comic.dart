@@ -2096,6 +2096,7 @@ class ComicList extends StatefulWidget {
     this.onSelectionStateChanged,
     this.enablePageStorage = false,
     this.enableSelection = false,
+    this.comicFilter,
     this.scrollbar = true,
     this.scrollbarTopPadding = 0,
   });
@@ -2135,6 +2136,10 @@ class ComicList extends StatefulWidget {
   /// unaffected.
   final bool enableSelection;
 
+  /// Optional display filter applied to loaded comics. Returning false hides
+  /// the comic without changing the source results or pagination state.
+  final bool Function(Comic comic)? comicFilter;
+
   /// Whether to overlay a draggable [AppScrollBar] for fast scrolling. On by
   /// default since every ComicList is a top-level comic grid.
   final bool scrollbar;
@@ -2171,8 +2176,29 @@ class ComicListState extends State<ComicList> {
   /// results on not-yet-loaded pages can't be selected without fetching them.
   List<Comic> get _loadedComics {
     final mode = appdata.settings['comicListDisplayMode'];
-    if (mode == 'paging') return _data[_page] ?? const [];
-    return _data.values.expand((e) => e).toList();
+    if (mode == 'paging') return _visibleComics(_data[_page] ?? const []);
+    return _visibleComics(_data.values.expand((e) => e).toList());
+  }
+
+  List<Comic> _visibleComics(Iterable<Comic> comics) {
+    final filter = widget.comicFilter;
+    return filter == null ? comics.toList() : comics.where(filter).toList();
+  }
+
+  void _onFavoriteChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    LocalFavoritesManager().addListener(_onFavoriteChanged);
+  }
+
+  @override
+  void dispose() {
+    LocalFavoritesManager().removeListener(_onFavoriteChanged);
+    super.dispose();
   }
 
   void _enterSelect(Comic c) {
@@ -2390,7 +2416,7 @@ class ComicListState extends State<ComicList> {
   /// SliverGridComics configured for the current (normal / selecting) mode.
   Widget _buildGrid(List<Comic> comics, {void Function()? onLastItemBuild}) {
     return SliverGridComics(
-      comics: comics,
+      comics: _visibleComics(comics),
       onLastItemBuild: onLastItemBuild,
       menuBuilder: _selecting
           ? null
@@ -2736,6 +2762,15 @@ class ComicListState extends State<ComicList> {
           const Expanded(child: Center(child: CircularProgressIndicator())),
         ],
       );
+    }
+    // When a display filter hides an entire loaded page there is no last tile
+    // to trigger pagination. Keep loading until a visible result is found or
+    // the source reaches its final page.
+    if (widget.comicFilter != null &&
+        _visibleComics(_data.values.expand((e) => e)).isEmpty &&
+        _error == null &&
+        (_maxPage == null || _data.length < _maxPage!)) {
+      _loadPage(_data.length + 1);
     }
     return SmoothCustomScrollView(
       key: enablePageStorage ? PageStorageKey('scroll$_page') : null,

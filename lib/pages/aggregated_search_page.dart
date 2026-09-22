@@ -4,6 +4,7 @@ import "package:venera/components/components.dart";
 import "package:venera/foundation/app.dart";
 import "package:venera/foundation/appdata.dart";
 import "package:venera/foundation/comic_source/comic_source.dart";
+import "package:venera/foundation/comic_type.dart";
 import "package:venera/foundation/favorites.dart";
 import "package:venera/pages/search_result_page.dart";
 import "package:venera/utils/translations.dart";
@@ -23,6 +24,8 @@ class _AggregatedSearchPageState extends State<AggregatedSearchPage> {
   late final SearchBarController controller;
 
   var _keyword = "";
+
+  bool _showFavorites = false;
 
   @override
   void initState() {
@@ -63,7 +66,20 @@ class _AggregatedSearchPageState extends State<AggregatedSearchPage> {
     return SmoothCustomScrollView(
       scrollbarTopPadding: context.padding.top + 56,
       slivers: [
-        SliverSearchBar(controller: controller),
+        SliverSearchBar(
+          controller: controller,
+          action: Tooltip(
+            message: (_showFavorites ? "Hide favorites" : "Show favorites").tl,
+            child: IconButton(
+              icon: Icon(
+                _showFavorites
+                    ? Icons.bookmark_remove_outlined
+                    : Icons.bookmark_add_outlined,
+              ),
+              onPressed: () => setState(() => _showFavorites = !_showFavorites),
+            ),
+          ),
+        ),
         SliverList(
           key: ValueKey(_keyword),
           delegate: SliverChildBuilderDelegate((context, index) {
@@ -72,6 +88,7 @@ class _AggregatedSearchPageState extends State<AggregatedSearchPage> {
               key: ValueKey(source.key),
               source: source,
               keyword: _keyword,
+              showFavorites: _showFavorites,
             );
           }, childCount: sources.length),
         ),
@@ -84,12 +101,15 @@ class _SliverSearchResult extends StatefulWidget {
   const _SliverSearchResult({
     required this.source,
     required this.keyword,
+    required this.showFavorites,
     super.key,
   });
 
   final ComicSource source;
 
   final String keyword;
+
+  final bool showFavorites;
 
   @override
   State<_SliverSearchResult> createState() => _SliverSearchResultState();
@@ -182,6 +202,16 @@ class _SliverSearchResultState extends State<_SliverSearchResult>
     ).paddingLeft(_kLeftPadding).paddingBottom(2);
   }
 
+  List<Comic> get _visibleComics {
+    if (widget.showFavorites) return comics ?? const [];
+    return (comics ?? const []).where((comic) {
+      return !LocalFavoritesManager().isExist(
+        comic.id,
+        ComicType.fromKey(comic.sourceKey),
+      );
+    }).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     if (error != null && error!.startsWith("CloudflareException")) {
@@ -231,7 +261,7 @@ class _SliverSearchResultState extends State<_SliverSearchResult>
                 ),
               ),
             )
-          else if (error != null || comics == null || comics!.isEmpty)
+          else if (error != null || comics == null || _visibleComics.isEmpty)
             SizedBox(
               height: _kComicHeight,
               child: Column(
@@ -258,7 +288,7 @@ class _SliverSearchResultState extends State<_SliverSearchResult>
               height: _kComicHeight,
               child: ListView(
                 scrollDirection: Axis.horizontal,
-                children: [for (var c in comics!) buildComic(c)],
+                children: [for (var c in _visibleComics) buildComic(c)],
               ),
             ),
         ],

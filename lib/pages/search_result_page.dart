@@ -3,6 +3,8 @@ import 'package:venera/components/components.dart';
 import 'package:venera/foundation/app.dart';
 import 'package:venera/foundation/appdata.dart';
 import 'package:venera/foundation/comic_source/comic_source.dart';
+import 'package:venera/foundation/comic_type.dart';
+import 'package:venera/foundation/favorites.dart';
 import 'package:venera/foundation/global_state.dart';
 import 'package:venera/pages/aggregated_search_page.dart';
 import 'package:venera/pages/search_page.dart';
@@ -43,6 +45,8 @@ class _SearchResultPageState extends State<SearchResultPage> {
 
   /// Set by [ComicList] via selectionHandlerCallback; enters multi-select mode.
   VoidCallback? _enterSelection;
+
+  bool _showFavorites = false;
 
   void search([String? text]) {
     if (text != null) {
@@ -165,6 +169,12 @@ class _SearchResultPageState extends State<SearchResultPage> {
     return ComicList(
       key: Key(text + options.toString() + sourceKey),
       enableSelection: true,
+      comicFilter: (comic) =>
+          _showFavorites ||
+          !LocalFavoritesManager().isExist(
+            comic.id,
+            ComicType.fromKey(comic.sourceKey),
+          ),
       selectionHandlerCallback: (fn) => _enterSelection = fn,
       scrollbarTopPadding: context.padding.top + 56,
       errorLeading: AppSearchBar(controller: controller, action: buildAction()),
@@ -190,6 +200,17 @@ class _SearchResultPageState extends State<SearchResultPage> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
+        Tooltip(
+          message: (_showFavorites ? "Hide favorites" : "Show favorites").tl,
+          child: IconButton(
+            icon: Icon(
+              _showFavorites
+                  ? Icons.bookmark_remove_outlined
+                  : Icons.bookmark_add_outlined,
+            ),
+            onPressed: () => setState(() => _showFavorites = !_showFavorites),
+          ),
+        ),
         Tooltip(
           message: "Multi-Select".tl,
           child: IconButton(
