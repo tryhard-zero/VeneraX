@@ -2,6 +2,8 @@ import "package:flutter/material.dart";
 import "package:venera/components/components.dart";
 import "package:venera/foundation/app.dart";
 import "package:venera/foundation/comic_source/comic_source.dart";
+import "package:venera/foundation/comic_type.dart";
+import "package:venera/foundation/favorites.dart";
 import "package:venera/utils/translations.dart";
 
 class RankingPage extends StatefulWidget {
@@ -20,6 +22,7 @@ class _RankingPageState extends State<RankingPage> {
 
   void Function()? _enterSelection;
   bool _selecting = false;
+  bool _showFavorites = false;
 
   void findData() {
     for (final source in ComicSource.all()) {
@@ -51,6 +54,15 @@ class _RankingPageState extends State<RankingPage> {
               title: Text("Ranking".tl),
               actions: [
                 Tooltip(
+                  message: (_showFavorites ? "Hide favorites" : "Show favorites").tl,
+                  child: IconButton(
+                    icon: Icon(_showFavorites
+                        ? Icons.bookmark_remove_outlined
+                        : Icons.bookmark_add_outlined),
+                    onPressed: () => setState(() => _showFavorites = !_showFavorites),
+                  ),
+                ),
+                Tooltip(
                   message: "Multi-Select".tl,
                   child: IconButton(
                     icon: const Icon(Icons.checklist),
@@ -68,6 +80,12 @@ class _RankingPageState extends State<RankingPage> {
         leadingSliver:
             buildOptions().sliverPadding(EdgeInsets.only(top: topPadding)),
         scrollbarTopPadding: topPadding,
+        comicFilter: (comic) =>
+            _showFavorites ||
+            !LocalFavoritesManager().isExist(
+              comic.id,
+              ComicType.fromKey(comic.sourceKey),
+            ),
         loadPage: data.rankingData!.load == null
             ? null
             : (i) => data.rankingData!.load!(optionValue, i),

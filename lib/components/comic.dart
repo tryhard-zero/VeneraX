@@ -2185,8 +2185,94 @@ class ComicListState extends State<ComicList> {
     return filter == null ? comics.toList() : comics.where(filter).toList();
   }
 
+  bool _isPageHiddenByFilter(int page) {
+    final comics = _data[page];
+    return widget.comicFilter != null &&
+        comics != null &&
+        comics.isNotEmpty &&
+        _visibleComics(comics).isEmpty;
+  }
+
+  int? _anotherKnownVisiblePage(int excludingPage) {
+    final candidates = _data.keys
+        .where((page) => page != excludingPage && !_isPageHiddenByFilter(page))
+        .toList()
+      ..sort();
+    if (candidates.isEmpty) return null;
+    final previous = candidates.where((page) => page < excludingPage).toList();
+    if (previous.isNotEmpty) return previous.last;
+    return candidates.first;
+  }
+
+  void _moveAwayFromHiddenCurrentPage() {
+    if (appdata.settings['comicListDisplayMode'] != 'paging' ||
+        !_isPageHiddenByFilter(_page)) {
+      return;
+    }
+
+    final totalPages = _maxPage;
+    final hasAnotherPage = totalPages != null
+        ? totalPages > 1
+        : _data.length > 1 || _nextUrl != null;
+    if (!hasAnotherPage) return;
+
+    var target = _anotherKnownVisiblePage(_page);
+    if (target == null && _page > 1) {
+      for (var page = _page - 1; page >= 1; page--) {
+        if (!_data.containsKey(page)) {
+          target = page;
+          break;
+        }
+      }
+    }
+    if (target == null) {
+      final candidate = _page + 1;
+      final hasUnloadedNext = _maxPage != null
+          ? candidate <= _maxPage! && !_data.containsKey(candidate)
+          : _nextUrl != null;
+      if (hasUnloadedNext) target = candidate;
+    }
+    if (target == null || target == _page) return;
+    final targetPage = target;
+    setState(() {
+      _error = null;
+      _page = targetPage;
+    });
+  }
+
+  List<int> _pageNumbers() {
+    const windowSize = 8;
+    final knownLastPage = _maxPage;
+    var first = _page - (windowSize ~/ 2);
+    if (first < 1) first = 1;
+    if (knownLastPage != null && first + windowSize - 1 > knownLastPage) {
+      first = (knownLastPage - windowSize + 1)
+          .clamp(1, knownLastPage)
+          .toInt();
+    }
+    final last = knownLastPage == null
+        ? first + windowSize - 1
+        : (first + windowSize - 1).clamp(1, knownLastPage).toInt();
+    return [
+      for (var page = first; page <= last; page++)
+        if (!_isPageHiddenByFilter(page)) page,
+    ];
+  }
+
   void _onFavoriteChanged() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    if (_isPageHiddenByFilter(_page)) {
+      final totalPages = _maxPage;
+      final hasAnotherPage = totalPages != null
+          ? totalPages > 1
+          : _data.length > 1 || _nextUrl != null;
+      if (hasAnotherPage) {
+        _moveAwayFromHiddenCurrentPage();
+        setState(() {});
+        return;
+      }
+    }
+    setState(() {});
   }
 
   @override
@@ -2493,8 +2579,12 @@ class ComicListState extends State<ComicList> {
   }
 
   Widget _buildPageSelector() {
-    return Row(
+    final pageNumbers = _pageNumbers();
+    return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
+        Row(
+          children: [
         FilledButton(
           onPressed: _page > 1
               ? () {
@@ -2580,6 +2670,29 @@ class ComicListState extends State<ComicList> {
               : null,
           child: Text("Next".tl),
         ).fixWidth(84),
+          ],
+        ),
+        if (pageNumbers.isNotEmpty)
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 4,
+            runSpacing: 4,
+            children: [
+              for (final page in pageNumbers)
+                page == _page
+                    ? FilledButton.tonal(
+                        onPressed: null,
+                        child: Text('$page'),
+                      )
+                    : TextButton(
+                        onPressed: () => setState(() {
+                          _error = null;
+                          _page = page;
+                        }),
+                        child: Text('$page'),
+                      ),
+            ],
+          ).paddingVertical(4),
       ],
     ).paddingVertical(8).paddingHorizontal(16);
   }
@@ -2617,6 +2730,11 @@ class ComicListState extends State<ComicList> {
               }
             });
             _mirrorComicsToDomain(res.data);
+            if (page == _page) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) _moveAwayFromHiddenCurrentPage();
+              });
+            }
           }
         } else {
           setState(() {
