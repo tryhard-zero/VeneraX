@@ -161,6 +161,8 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
 
   bool descriptionExpanded = false;
 
+  bool _showRelatedFavorites = false;
+
   /// Set when the user chooses to view a comic that matched their tag blocklist,
   /// so the notice doesn't come back while the page is open.
   bool _blockOverridden = false;
@@ -280,6 +282,7 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
     scrollController.addListener(onScroll);
     ComicCollectionStore.changes.addListener(_onCollectionChanged);
     PreTranslationTaskManager.instance.addListener(update);
+    LocalFavoritesManager().addListener(update);
     // The per-comic translation toggle lives in the service; listen so the
     // pre-translate button appears/disappears the moment it changes.
     ImageTranslationService.instance.addListener(update);
@@ -291,6 +294,7 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
     scrollController.removeListener(onScroll);
     ComicCollectionStore.changes.removeListener(_onCollectionChanged);
     PreTranslationTaskManager.instance.removeListener(update);
+    LocalFavoritesManager().removeListener(update);
     ImageTranslationService.instance.removeListener(update);
     super.dispose();
   }
@@ -1658,15 +1662,40 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
     if (comic.recommend == null || comic.recommend!.isEmpty) {
       return const SliverPadding(padding: EdgeInsets.zero);
     }
+    final recommendations = comic.recommend!
+        .where(
+          (item) =>
+              _showRelatedFavorites ||
+              !LocalFavoritesManager().isExist(
+                item.id,
+                ComicType.fromKey(item.sourceKey),
+              ),
+        )
+        .toList();
     return SliverMainAxisGroup(
       slivers: [
         SliverToBoxAdapter(
           child: _ComicSectionHeader(
             icon: Icons.auto_awesome_mosaic_outlined,
             title: "Related".tl,
+            trailing: Tooltip(
+              message:
+                  (_showRelatedFavorites ? "Hide favorites" : "Show favorites")
+                      .tl,
+              child: IconButton(
+                icon: Icon(
+                  _showRelatedFavorites
+                      ? Icons.bookmark_remove_outlined
+                      : Icons.bookmark_add_outlined,
+                ),
+                onPressed: () => setState(
+                  () => _showRelatedFavorites = !_showRelatedFavorites,
+                ),
+              ),
+            ),
           ).paddingTop(20),
         ),
-        SliverGridComics(comics: comic.recommend!),
+        SliverGridComics(comics: recommendations),
         const SliverPadding(padding: EdgeInsets.only(bottom: 12)),
       ],
     );
