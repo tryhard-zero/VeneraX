@@ -1,7 +1,6 @@
 import "package:flutter/material.dart";
 import "package:venera/components/components.dart";
 import "package:venera/foundation/app.dart";
-import "package:venera/foundation/comic_collection_store.dart";
 import "package:venera/foundation/comic_source/comic_source.dart";
 import "package:venera/foundation/comic_type.dart";
 import "package:venera/foundation/favorites.dart";
@@ -55,16 +54,12 @@ class _RankingPageState extends State<RankingPage> {
               title: Text("Ranking".tl),
               actions: [
                 Tooltip(
-                  message:
-                      (_showFavorites ? "Hide favorites" : "Show favorites").tl,
+                  message: (_showFavorites ? "Hide favorites" : "Show favorites").tl,
                   child: IconButton(
-                    icon: Icon(
-                      _showFavorites
-                          ? Icons.bookmark_remove_outlined
-                          : Icons.bookmark_add_outlined,
-                    ),
-                    onPressed: () =>
-                        setState(() => _showFavorites = !_showFavorites),
+                    icon: Icon(_showFavorites
+                        ? Icons.bookmark_remove_outlined
+                        : Icons.bookmark_add_outlined),
+                    onPressed: () => setState(() => _showFavorites = !_showFavorites),
                   ),
                 ),
                 Tooltip(
@@ -82,17 +77,15 @@ class _RankingPageState extends State<RankingPage> {
         selectionHandlerCallback: (fn) => _enterSelection = fn,
         onSelectionStateChanged: (s) => setState(() => _selecting = s),
         errorLeading: SizedBox(height: topPadding),
-        leadingSliver: buildOptions().sliverPadding(
-          EdgeInsets.only(top: topPadding),
-        ),
+        leadingSliver:
+            buildOptions().sliverPadding(EdgeInsets.only(top: topPadding)),
         scrollbarTopPadding: topPadding,
         comicFilter: (comic) =>
             _showFavorites ||
-            (!LocalFavoritesManager().isExist(
-                  comic.id,
-                  ComicType.fromKey(comic.sourceKey),
-                ) &&
-                !ComicCollectionStore.isMember(comic.sourceKey, comic.id)),
+            !LocalFavoritesManager().isExist(
+              comic.id,
+              ComicType.fromKey(comic.sourceKey),
+            ),
         loadPage: data.rankingData!.load == null
             ? null
             : (i) => data.rankingData!.load!(optionValue, i),
@@ -118,16 +111,14 @@ class _RankingPageState extends State<RankingPage> {
 
   Widget buildOptions() {
     List<Widget> children = [];
-    children.add(
-      Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: [
-          for (var option in options.entries)
-            buildOptionItem(option.value.tl, option.key, context),
-        ],
-      ),
-    );
+    children.add(Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (var option in options.entries)
+          buildOptionItem(option.value.tl, option.key, context)
+      ],
+    ));
     return SliverToBoxAdapter(
       child: Column(
         mainAxisSize: MainAxisSize.min,

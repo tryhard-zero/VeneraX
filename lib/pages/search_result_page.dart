@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:venera/components/components.dart';
 import 'package:venera/foundation/app.dart';
 import 'package:venera/foundation/appdata.dart';
-import 'package:venera/foundation/comic_collection_store.dart';
 import 'package:venera/foundation/comic_source/comic_source.dart';
 import 'package:venera/foundation/comic_type.dart';
 import 'package:venera/foundation/favorites.dart';
@@ -149,8 +148,7 @@ class _SearchResultPageState extends State<SearchResultPage> {
   /// Null when the target can't search: collections and online libraries are
   /// native sources built without a search implementation, and a source may also
   /// have been uninstalled since the tag or shared link was created.
-  SearchPageData? get _searchData =>
-      ComicSource.find(sourceKey)?.searchPageData;
+  SearchPageData? get _searchData => ComicSource.find(sourceKey)?.searchPageData;
 
   @override
   Widget build(BuildContext context) {
@@ -173,11 +171,10 @@ class _SearchResultPageState extends State<SearchResultPage> {
       enableSelection: true,
       comicFilter: (comic) =>
           _showFavorites ||
-          (!LocalFavoritesManager().isExist(
-                comic.id,
-                ComicType.fromKey(comic.sourceKey),
-              ) &&
-              !ComicCollectionStore.isMember(comic.sourceKey, comic.id)),
+          !LocalFavoritesManager().isExist(
+            comic.id,
+            ComicType.fromKey(comic.sourceKey),
+          ),
       selectionHandlerCallback: (fn) => _enterSelection = fn,
       scrollbarTopPadding: context.padding.top + 56,
       errorLeading: AppSearchBar(controller: controller, action: buildAction()),

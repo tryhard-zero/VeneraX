@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:venera/components/components.dart';
 import 'package:venera/foundation/app.dart';
 import 'package:venera/foundation/appdata.dart';
-import 'package:venera/foundation/comic_collection_store.dart';
 import 'package:venera/foundation/comic_type.dart';
 import 'package:venera/foundation/comic_source/comic_source.dart';
 import 'package:venera/foundation/favorites.dart';
@@ -79,7 +78,6 @@ class _ExplorePageState extends State<ExplorePage>
     pages = pages.where((e) => all.contains(e)).toList();
     controller = TabController(length: pages.length, vsync: this);
     appdata.settings.addListener(onSettingsChanged);
-    ComicCollectionStore.changes.addListener(onCollectionChanged);
     NaviPane.of(context).addNaviItemTapListener(onNaviItemTapped);
     super.initState();
   }
@@ -94,13 +92,8 @@ class _ExplorePageState extends State<ExplorePage>
   void dispose() {
     controller.dispose();
     appdata.settings.removeListener(onSettingsChanged);
-    ComicCollectionStore.changes.removeListener(onCollectionChanged);
     naviPane?.removeNaviItemTapListener(onNaviItemTapped);
     super.dispose();
-  }
-
-  void onCollectionChanged() {
-    if (mounted) setState(() {});
   }
 
   void refresh() {
@@ -271,11 +264,9 @@ class _ExplorePageState extends State<ExplorePage>
             heroTag: 'explore_favorites_visibility',
             tooltip: (_showFavorites ? "Hide favorites" : "Show favorites").tl,
             onPressed: () => setState(() => _showFavorites = !_showFavorites),
-            child: Icon(
-              _showFavorites
-                  ? Icons.bookmark_remove_outlined
-                  : Icons.bookmark_add_outlined,
-            ),
+            child: Icon(_showFavorites
+                ? Icons.bookmark_remove_outlined
+                : Icons.bookmark_add_outlined),
           ),
         ),
       ],
@@ -363,8 +354,10 @@ class _SingleExplorePageState extends AutomaticGlobalState<_SingleExplorePage>
         enablePageStorage: true,
         loadPage: data.loadPage,
         loadNext: data.loadNext,
-        comicFilter: (comic) =>
-            _isExploreComicVisible(comic, showFavorites: widget.showFavorites),
+        comicFilter: (comic) => _isExploreComicVisible(
+          comic,
+          showFavorites: widget.showFavorites,
+        ),
         key: const PageStorageKey("comic_list"),
         controller: scrollController,
         refreshHandlerCallback: (c) {
@@ -450,27 +443,18 @@ class _MixedExplorePageState
     for (var part in data) {
       if (part is ExplorePagePart) {
         if (cache.isNotEmpty) {
-          yield SliverGridComics(
-            comics: _visibleExploreComics(cache, widget.showFavorites),
-          );
+          yield SliverGridComics(comics: _visibleExploreComics(cache, widget.showFavorites));
           yield const SliverToBoxAdapter(child: Divider());
           cache.clear();
         }
-        yield* _buildExplorePagePart(
-          context,
-          part,
-          widget.sourceKey,
-          showFavorites: widget.showFavorites,
-        );
+        yield* _buildExplorePagePart(context, part, widget.sourceKey, showFavorites: widget.showFavorites);
         yield const SliverToBoxAdapter(child: Divider());
       } else {
         cache.addAll(part as List<Comic>);
       }
     }
     if (cache.isNotEmpty) {
-      yield SliverGridComics(
-        comics: _visibleExploreComics(cache, widget.showFavorites),
-      );
+      yield SliverGridComics(comics: _visibleExploreComics(cache, widget.showFavorites));
     }
   }
 
@@ -505,7 +489,8 @@ Iterable<Widget> _buildExplorePagePart(
   ExplorePagePart part,
   String sourceKey, {
   required bool showFavorites,
-}) sync* {
+}
+) sync* {
   Widget buildTitle(ExplorePagePart part) {
     return SliverToBoxAdapter(
       child: SizedBox(
@@ -550,9 +535,7 @@ Iterable<Widget> _buildExplorePagePart(
   }
 
   Widget buildComics(ExplorePagePart part) {
-    return SliverGridComics(
-      comics: _visibleExploreComics(part.comics, showFavorites),
-    );
+    return SliverGridComics(comics: _visibleExploreComics(part.comics, showFavorites));
   }
 
   yield buildTitle(part);
@@ -560,22 +543,13 @@ Iterable<Widget> _buildExplorePagePart(
 }
 
 bool _isExploreComicVisible(Comic comic, {required bool showFavorites}) =>
-    showFavorites ||
-    (!LocalFavoritesManager().isExist(
-          comic.id,
-          ComicType.fromKey(comic.sourceKey),
-        ) &&
-        !ComicCollectionStore.isMember(comic.sourceKey, comic.id));
+    showFavorites || !LocalFavoritesManager().isExist(
+      comic.id,
+      ComicType.fromKey(comic.sourceKey),
+    );
 
 List<Comic> _visibleExploreComics(List<Comic> comics, bool showFavorites) =>
-    showFavorites
-    ? comics
-    : comics
-          .where(
-            (comic) =>
-                _isExploreComicVisible(comic, showFavorites: showFavorites),
-          )
-          .toList();
+    showFavorites ? comics : comics.where((comic) => _isExploreComicVisible(comic, showFavorites: showFavorites)).toList();
 
 class _MultiPartExplorePage extends StatefulWidget {
   const _MultiPartExplorePage({
@@ -706,12 +680,7 @@ class _MultiPartExplorePageState extends State<_MultiPartExplorePage> {
 
   Iterable<Widget> _buildPage(BuildContext context) sync* {
     for (var part in parts!) {
-      yield* _buildExplorePagePart(
-        context,
-        part,
-        widget.comicSourceKey,
-        showFavorites: widget.showFavorites,
-      );
+      yield* _buildExplorePagePart(context, part, widget.comicSourceKey, showFavorites: widget.showFavorites);
     }
   }
 }

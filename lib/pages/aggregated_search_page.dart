@@ -3,7 +3,6 @@ import 'package:shimmer_animation/shimmer_animation.dart';
 import "package:venera/components/components.dart";
 import "package:venera/foundation/app.dart";
 import "package:venera/foundation/appdata.dart";
-import "package:venera/foundation/comic_collection_store.dart";
 import "package:venera/foundation/comic_source/comic_source.dart";
 import "package:venera/foundation/comic_type.dart";
 import "package:venera/foundation/favorites.dart";
@@ -171,21 +170,15 @@ class _SliverSearchResultState extends State<_SliverSearchResult>
     super.initState();
     load();
     LocalFavoritesManager().addListener(_onFavoriteChanged);
-    ComicCollectionStore.changes.addListener(_onCollectionChanged);
   }
 
   @override
   void dispose() {
     LocalFavoritesManager().removeListener(_onFavoriteChanged);
-    ComicCollectionStore.changes.removeListener(_onCollectionChanged);
     super.dispose();
   }
 
   void _onFavoriteChanged() {
-    if (mounted) setState(() {});
-  }
-
-  void _onCollectionChanged() {
     if (mounted) setState(() {});
   }
 
@@ -213,10 +206,9 @@ class _SliverSearchResultState extends State<_SliverSearchResult>
     if (widget.showFavorites) return comics ?? const [];
     return (comics ?? const []).where((comic) {
       return !LocalFavoritesManager().isExist(
-            comic.id,
-            ComicType.fromKey(comic.sourceKey),
-          ) &&
-          !ComicCollectionStore.isMember(comic.sourceKey, comic.id);
+        comic.id,
+        ComicType.fromKey(comic.sourceKey),
+      );
     }).toList();
   }
 
