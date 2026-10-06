@@ -1,6 +1,7 @@
 import "package:flutter/material.dart";
 import "package:venera/components/components.dart";
 import "package:venera/foundation/app.dart";
+import "package:venera/foundation/comic_collection_store.dart";
 import "package:venera/foundation/comic_source/comic_source.dart";
 import "package:venera/foundation/comic_type.dart";
 import "package:venera/foundation/favorites.dart";
@@ -141,10 +142,11 @@ class _CategoryComicsPageState extends State<CategoryComicsPage> {
         scrollbarTopPadding: topPadding,
         comicFilter: (comic) =>
             _showFavorites ||
-            !LocalFavoritesManager().isExist(
-              comic.id,
-              ComicType.fromKey(comic.sourceKey),
-            ),
+            (!LocalFavoritesManager().isExist(
+                  comic.id,
+                  ComicType.fromKey(comic.sourceKey),
+                ) &&
+                !ComicCollectionStore.isMember(comic.sourceKey, comic.id)),
         loadPage: (i) =>
             data.load(widget.category, widget.param, optionsValue, i),
       );
@@ -159,12 +161,16 @@ class _CategoryComicsPageState extends State<CategoryComicsPage> {
               title: Text(widget.category),
               actions: [
                 Tooltip(
-                  message: (_showFavorites ? "Hide favorites" : "Show favorites").tl,
+                  message:
+                      (_showFavorites ? "Hide favorites" : "Show favorites").tl,
                   child: IconButton(
-                    icon: Icon(_showFavorites
-                        ? Icons.bookmark_remove_outlined
-                        : Icons.bookmark_add_outlined),
-                    onPressed: () => setState(() => _showFavorites = !_showFavorites),
+                    icon: Icon(
+                      _showFavorites
+                          ? Icons.bookmark_remove_outlined
+                          : Icons.bookmark_add_outlined,
+                    ),
+                    onPressed: () =>
+                        setState(() => _showFavorites = !_showFavorites),
                   ),
                 ),
                 Tooltip(

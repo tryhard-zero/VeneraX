@@ -309,16 +309,26 @@ class ComicTile extends StatelessWidget {
           onClick: () => showAddToCollectionDialog(context, [comic]),
         ),
       MenuEntry(
-        icon: ReadLaterManager().isExist(comic.id, ComicType.fromKey(comic.sourceKey))
+        icon:
+            ReadLaterManager().isExist(
+              comic.id,
+              ComicType.fromKey(comic.sourceKey),
+            )
             ? Icons.bookmark_remove_outlined
             : Icons.watch_later_outlined,
-        text: ReadLaterManager().isExist(comic.id, ComicType.fromKey(comic.sourceKey))
+        text:
+            ReadLaterManager().isExist(
+              comic.id,
+              ComicType.fromKey(comic.sourceKey),
+            )
             ? 'Remove from read later'.tl
             : 'Read later'.tl,
         onClick: () async {
           final added = await ReadLaterManager().toggle(comic);
           App.rootContext.showMessage(
-            message: added ? 'Added to read later'.tl : 'Removed from read later'.tl,
+            message: added
+                ? 'Added to read later'.tl
+                : 'Removed from read later'.tl,
           );
         },
       ),
@@ -988,10 +998,7 @@ void showBlockDialog({
                         // part after the namespace), so the entry also matches
                         // comics that carry the tag without a namespace.
                         text: translate
-                            ? item
-                                .split(':')
-                                .last
-                                .translateTagIfNeed
+                            ? item.split(':').last.translateTagIfNeed
                             : item,
                         isSelected: picked.contains(item),
                         onTap: () {
@@ -1208,8 +1215,8 @@ class ComicDescription extends StatelessWidget {
           extraRows: languageItems.isEmpty ? 0 : 1,
         );
         return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.start,
           children: [
             if (showTitle) ...[
               Text(
@@ -2194,10 +2201,13 @@ class ComicListState extends State<ComicList> {
   }
 
   int? _anotherKnownVisiblePage(int excludingPage) {
-    final candidates = _data.keys
-        .where((page) => page != excludingPage && !_isPageHiddenByFilter(page))
-        .toList()
-      ..sort();
+    final candidates =
+        _data.keys
+            .where(
+              (page) => page != excludingPage && !_isPageHiddenByFilter(page),
+            )
+            .toList()
+          ..sort();
     if (candidates.isEmpty) return null;
     final previous = candidates.where((page) => page < excludingPage).toList();
     if (previous.isNotEmpty) return previous.last;
@@ -2246,9 +2256,7 @@ class ComicListState extends State<ComicList> {
     var first = _page - (windowSize ~/ 2);
     if (first < 1) first = 1;
     if (knownLastPage != null && first + windowSize - 1 > knownLastPage) {
-      first = (knownLastPage - windowSize + 1)
-          .clamp(1, knownLastPage)
-          .toInt();
+      first = (knownLastPage - windowSize + 1).clamp(1, knownLastPage).toInt();
     }
     final last = knownLastPage == null
         ? first + windowSize - 1
@@ -2275,15 +2283,19 @@ class ComicListState extends State<ComicList> {
     setState(() {});
   }
 
+  void _onCollectionChanged() => _onFavoriteChanged();
+
   @override
   void initState() {
     super.initState();
     LocalFavoritesManager().addListener(_onFavoriteChanged);
+    ComicCollectionStore.changes.addListener(_onCollectionChanged);
   }
 
   @override
   void dispose() {
     LocalFavoritesManager().removeListener(_onFavoriteChanged);
+    ComicCollectionStore.changes.removeListener(_onCollectionChanged);
     super.dispose();
   }
 
@@ -2364,8 +2376,9 @@ class ComicListState extends State<ComicList> {
       comic.id,
       ComicType.fromKey(comic.sourceKey),
     );
-    final canCollect =
-        !ComicCollectionStore.isCollectionSourceKey(comic.sourceKey);
+    final canCollect = !ComicCollectionStore.isCollectionSourceKey(
+      comic.sourceKey,
+    );
     return (
       start: favorited
           ? SwipePane(
@@ -2472,7 +2485,10 @@ class ComicListState extends State<ComicList> {
     return SliverAppbar(
       leading: Tooltip(
         message: "Cancel".tl,
-        child: IconButton(icon: const Icon(Icons.close), onPressed: _exitSelect),
+        child: IconButton(
+          icon: const Icon(Icons.close),
+          onPressed: _exitSelect,
+        ),
       ),
       title: Text(_selected.length.toString()),
       actions: [
@@ -2510,8 +2526,9 @@ class ComicListState extends State<ComicList> {
                 ? _menuBuilderWithSelect
                 : widget.menuBuilder),
       selections: _selecting ? _selected : null,
-      onTapWithIndex:
-          _selecting ? (comic, heroID, index) => _toggleSelect(comic) : null,
+      onTapWithIndex: _selecting
+          ? (comic, heroID, index) => _toggleSelect(comic)
+          : null,
       swipeActionBuilder:
           (widget.enableSelection && !_selecting && App.isMobile)
           ? _favoriteSwipePanes
@@ -2585,91 +2602,94 @@ class ComicListState extends State<ComicList> {
       children: [
         Row(
           children: [
-        FilledButton(
-          onPressed: _page > 1
-              ? () {
-                  setState(() {
-                    _error = null;
-                    _page--;
-                  });
-                }
-              : null,
-          child: Text("Back".tl),
-        ).fixWidth(84),
-        Expanded(
-          child: Center(
-            child: Material(
-              color: Theme.of(context).colorScheme.surfaceContainer,
-              borderRadius: BorderRadius.circular(8),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(8),
-                onTap: () {
-                  String value = '';
-                  showDialog(
-                    context: App.rootContext,
-                    builder: (context) {
-                      return ContentDialog(
-                        title: "Jump to page".tl,
-                        content: TextField(
-                          keyboardType: TextInputType.number,
-                          decoration: InputDecoration(labelText: "Page".tl),
-                          inputFormatters: <TextInputFormatter>[
-                            FilteringTextInputFormatter.digitsOnly,
-                          ],
-                          onChanged: (v) {
-                            value = v;
-                          },
-                        ).paddingHorizontal(16),
-                        actions: [
-                          Button.filled(
-                            onPressed: () {
-                              Navigator.of(context).pop();
-                              var page = int.tryParse(value);
-                              if (page == null) {
-                                context.showMessage(message: "Invalid page".tl);
-                              } else {
-                                if (page > 0 &&
-                                    (_maxPage == null || page <= _maxPage!)) {
-                                  setState(() {
-                                    _error = null;
-                                    _page = page;
-                                  });
-                                } else {
-                                  context.showMessage(
-                                    message: "Invalid page".tl,
-                                  );
-                                }
-                              }
-                            },
-                            child: Text("Jump".tl),
-                          ),
-                        ],
+            FilledButton(
+              onPressed: _page > 1
+                  ? () {
+                      setState(() {
+                        _error = null;
+                        _page--;
+                      });
+                    }
+                  : null,
+              child: Text("Back".tl),
+            ).fixWidth(84),
+            Expanded(
+              child: Center(
+                child: Material(
+                  color: Theme.of(context).colorScheme.surfaceContainer,
+                  borderRadius: BorderRadius.circular(8),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: () {
+                      String value = '';
+                      showDialog(
+                        context: App.rootContext,
+                        builder: (context) {
+                          return ContentDialog(
+                            title: "Jump to page".tl,
+                            content: TextField(
+                              keyboardType: TextInputType.number,
+                              decoration: InputDecoration(labelText: "Page".tl),
+                              inputFormatters: <TextInputFormatter>[
+                                FilteringTextInputFormatter.digitsOnly,
+                              ],
+                              onChanged: (v) {
+                                value = v;
+                              },
+                            ).paddingHorizontal(16),
+                            actions: [
+                              Button.filled(
+                                onPressed: () {
+                                  Navigator.of(context).pop();
+                                  var page = int.tryParse(value);
+                                  if (page == null) {
+                                    context.showMessage(
+                                      message: "Invalid page".tl,
+                                    );
+                                  } else {
+                                    if (page > 0 &&
+                                        (_maxPage == null ||
+                                            page <= _maxPage!)) {
+                                      setState(() {
+                                        _error = null;
+                                        _page = page;
+                                      });
+                                    } else {
+                                      context.showMessage(
+                                        message: "Invalid page".tl,
+                                      );
+                                    }
+                                  }
+                                },
+                                child: Text("Jump".tl),
+                              ),
+                            ],
+                          );
+                        },
                       );
                     },
-                  );
-                },
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 6,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 6,
+                      ),
+                      child: Text("Page $_page / ${_maxPage ?? '?'}"),
+                    ),
                   ),
-                  child: Text("Page $_page / ${_maxPage ?? '?'}"),
                 ),
               ),
             ),
-          ),
-        ),
-        FilledButton(
-          onPressed: _page < (_maxPage ?? (_page + 1))
-              ? () {
-                  setState(() {
-                    _error = null;
-                    _page++;
-                  });
-                }
-              : null,
-          child: Text("Next".tl),
-        ).fixWidth(84),
+            FilledButton(
+              onPressed: _page < (_maxPage ?? (_page + 1))
+                  ? () {
+                      setState(() {
+                        _error = null;
+                        _page++;
+                      });
+                    }
+                  : null,
+              child: Text("Next".tl),
+            ).fixWidth(84),
           ],
         ),
         if (pageNumbers.isNotEmpty)
@@ -2680,10 +2700,7 @@ class ComicListState extends State<ComicList> {
             children: [
               for (final page in pageNumbers)
                 page == _page
-                    ? FilledButton.tonal(
-                        onPressed: null,
-                        child: Text('$page'),
-                      )
+                    ? FilledButton.tonal(onPressed: null, child: Text('$page'))
                     : TextButton(
                         onPressed: () => setState(() {
                           _error = null;
@@ -2787,9 +2804,7 @@ class ComicListState extends State<ComicList> {
   @override
   Widget build(BuildContext context) {
     var type = appdata.settings['comicListDisplayMode'];
-    Widget child = type == 'paging'
-        ? buildPagingMode()
-        : buildContinuousMode();
+    Widget child = type == 'paging' ? buildPagingMode() : buildContinuousMode();
     if (widget.enableSelection) {
       // While selecting, the system back gesture / button cancels selection
       // instead of leaving the page.
@@ -3272,9 +3287,11 @@ class SimpleComicTile extends StatelessWidget {
 
     if (showFavorite) {
       final comicType = ComicType.fromKey(comic.sourceKey);
-      final showFav = appdata.settings['showFavoriteStatusOnTile'] &&
+      final showFav =
+          appdata.settings['showFavoriteStatusOnTile'] &&
           LocalFavoritesManager().isExist(comic.id, comicType);
-      final showReadLater = appdata.settings['showReadLaterStatusOnTile'] &&
+      final showReadLater =
+          appdata.settings['showReadLaterStatusOnTile'] &&
           ReadLaterManager().isExist(comic.id, comicType);
       if (showFav || showReadLater) {
         cover = Stack(

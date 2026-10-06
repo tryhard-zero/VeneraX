@@ -306,7 +306,8 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
   }
 
   void _onCollectionChanged() {
-    if (mounted && ComicCollectionStore.isCollectionSourceKey(widget.sourceKey)) {
+    if (mounted &&
+        ComicCollectionStore.isCollectionSourceKey(widget.sourceKey)) {
       setState(() {});
     }
   }
@@ -316,7 +317,8 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
   void _toggleCollectionDetailMode() {
     final collection = _collection;
     if (collection == null) return;
-    final mode = ComicCollectionStore.detailDisplayMode ==
+    final mode =
+        ComicCollectionStore.detailDisplayMode ==
             CollectionDetailDisplayMode.chapters
         ? CollectionDetailDisplayMode.covers
         : CollectionDetailDisplayMode.chapters;
@@ -817,11 +819,12 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
                   ? Icons.view_list_outlined
                   : Icons.grid_view_outlined,
             ),
-            tooltip: (ComicCollectionStore.detailDisplayMode ==
-                        CollectionDetailDisplayMode.covers
-                    ? 'Show chapters'
-                    : 'Show covers')
-                .tl,
+            tooltip:
+                (ComicCollectionStore.detailDisplayMode ==
+                            CollectionDetailDisplayMode.covers
+                        ? 'Show chapters'
+                        : 'Show covers')
+                    .tl,
             onPressed: _toggleCollectionDetailMode,
           ),
         if (!isDownloaded)
@@ -1629,8 +1632,7 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
           onTap: (comic, heroID) {
             final member = collection.members.firstWhere(
               (item) =>
-                  item.sourceKey == comic.sourceKey &&
-                  item.comicId == comic.id,
+                  item.sourceKey == comic.sourceKey && item.comicId == comic.id,
             );
             context.to(
               () => ComicPage(
@@ -1666,10 +1668,11 @@ class _ComicPageState extends LoadingState<ComicPage, ComicDetails>
         .where(
           (item) =>
               _showRelatedFavorites ||
-              !LocalFavoritesManager().isExist(
-                item.id,
-                ComicType.fromKey(item.sourceKey),
-              ),
+              (!LocalFavoritesManager().isExist(
+                    item.id,
+                    ComicType.fromKey(item.sourceKey),
+                  ) &&
+                  !ComicCollectionStore.isMember(item.sourceKey, item.id)),
         )
         .toList();
     return SliverMainAxisGroup(
